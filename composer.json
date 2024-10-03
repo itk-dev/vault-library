@@ -17,14 +17,14 @@
     "php": ">=8.2",
     "psr/http-client": "^1.0",
     "psr/http-factory": "^1.1",
-    "psr/http-message": "^2.0"
+    "psr/simple-cache": "^3.0"
   },
   "require-dev": {
     "symfony/http-client": "^7.1"
   },
   "autoload": {
     "psr-4": {
-      "Vault\\": "src/Vault"
+      "ItkDev\\Vault\\": "src/Vault"
     }
   }
 }

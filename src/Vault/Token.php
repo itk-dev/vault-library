@@ -1,8 +1,8 @@
 <?php
 
-namespace Vault;
+namespace ItkDev\Vault;
 
-class Token
+final class Token
 {
     public function __construct(
         public readonly string $token,
