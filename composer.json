@@ -20,7 +20,7 @@
     "psr/simple-cache": "^3.0"
   },
   "require-dev": {
-    "symfony/http-client": "^7.1"
+    "phpunit/phpunit": "^11.3"
   },
   "autoload": {
     "psr-4": {

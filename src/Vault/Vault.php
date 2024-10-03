@@ -7,6 +7,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestFactoryInterface;
+use Psr\Http\Message\StreamFactoryInterface;
 use Psr\SimpleCache\CacheInterface;
 
 readonly class Vault implements VaultInterface
@@ -14,6 +15,7 @@ readonly class Vault implements VaultInterface
     public function __construct(
         private ClientInterface $httpClient,
         private RequestFactoryInterface $requestFactory,
+        private StreamFactoryInterface $streamFactory,
         private CacheInterface $cache,
         private string $vaultUrl,
     ) {}
@@ -26,13 +28,14 @@ readonly class Vault implements VaultInterface
         if ($reset || is_null($token)) {
             $loginUrl = sprintf('%s/v1/auth/%s/login', $this->vaultUrl, $enginePath);
 
-            $body = $this->httpClient->createStream(json_encode([
+            $body = $this->streamFactory->createStream(json_encode([
                 'role_id' => $roleId,
                 'secret_id' => $secretId,
             ]));
             $request = $this->requestFactory->createRequest('POST', $loginUrl)
                 ->withHeader('Content-Type', 'application/json')
                 ->withBody($body);
+
             $response = $this->httpClient->sendRequest($request);
 
             $data = json_decode($response->getBody(), associative:  true, flags: JSON_THROW_ON_ERROR);
