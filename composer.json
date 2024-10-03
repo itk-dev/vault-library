@@ -1,0 +1,30 @@
+{
+  "name": "itkdev/vault",
+  "type": "library",
+  "description": "Library to communicate with Hashicorp Vault",
+  "keywords": ["Hashicorp", "vault", "approle", "e"],
+  "homepage": "https://github.com/itk-dev",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Jesper Kristensen",
+      "email": "cableman@linuxdev.dk",
+      "homepage": "https://linuxdev.dk",
+      "role": "Developer"
+    }
+  ],
+  "require": {
+    "php": ">=8.2",
+    "psr/http-client": "^1.0",
+    "psr/http-factory": "^1.1",
+    "psr/http-message": "^2.0"
+  },
+  "require-dev": {
+    "symfony/http-client": "^7.1"
+  },
+  "autoload": {
+    "psr-4": {
+      "Vault\\": "src/Vault"
+    }
+  }
+}
