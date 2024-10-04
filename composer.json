@@ -1,5 +1,5 @@
 {
-  "name": "itkdev/vault",
+  "name": "itk-dev/vault",
   "type": "library",
   "description": "Library to communicate with Hashicorp Vault",
   "keywords": ["Hashicorp", "vault", "approle", "e"],
