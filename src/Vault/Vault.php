@@ -9,6 +9,8 @@ use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
 use Psr\SimpleCache\CacheInterface;
+use \ItkDev\Vault\Model\Secret;
+use \ItkDev\Vault\Model\Token;
 
 readonly class Vault implements VaultInterface
 {
@@ -56,43 +58,58 @@ readonly class Vault implements VaultInterface
         return $token;
     }
 
-    public function getSecret(Token $token, string $path, string $secret, array $id): Secret
+    public function getSecret(Token $token, string $path, string $secret, array $id, bool $useCache = false, bool $reset = false, int $expire = 0): Secret
     {
-        $secret = $this->getSecrets($token, $path, $secret, [$id]);
+        $secret = $this->getSecrets(
+            token: $token,
+            path: $path,
+            secret: $secret,
+            ids: [$id],
+            useCache: $useCache,
+            reset: $reset,
+            expire: $expire
+        );
 
         return reset($secret);
     }
 
     // @TODO: Add cache of secret (handle vault offline).
-    public function getSecrets(Token $token, string $path, string $secret, array $ids): array
+    public function getSecrets(Token $token, string $path, string $secret, array $ids, bool $useCache = false, bool $reset = false, int $expire = 0): array
     {
-        $url = sprintf('%s/v1/%s/data/%s', $this->vaultUrl, $path, $secret);
+        $cacheKey = 'itkdev_vault_secret_' . $secret;
+        $data = $this->cache->get($cacheKey);
 
-        $request = $this->requestFactory->createRequest('GET', $url)
-            ->withHeader('Content-Type', 'application/json')
-            ->withHeader('Authorization', 'Bearer ' . $token->token);
-        $response = $this->httpClient->sendRequest($request);
+        if (!$useCache || is_null($data) || $reset) {
+            $url = sprintf('%s/v1/%s/data/%s', $this->vaultUrl, $path, $secret);
 
-        $res = json_decode($response->getBody(), associative:  true, flags: JSON_THROW_ON_ERROR);
+            $request = $this->requestFactory->createRequest('GET', $url)
+                ->withHeader('Content-Type', 'application/json')
+                ->withHeader('Authorization', 'Bearer ' . $token->token);
+            $response = $this->httpClient->sendRequest($request);
 
-        $created = new DateTimeImmutable($res['data']['metadata']['created_time'], new DateTimeZone('UTC'));
-        $version = $res['data']['metadata']['version'];
+            $res = json_decode($response->getBody(), associative:  true, flags: JSON_THROW_ON_ERROR);
 
-        $data = [];
-        if (!empty($ids)) {
-            $secrets = $res['data']['data'];
-            foreach ($ids as $id) {
-                if (isset($secrets[$id])) {
-                   $data[$id] = new Secret(
-                       id: $id,
-                       value: $secrets[$id],
-                       version: $version,
-                       createdAt: $created
-                   );
-                } else {
-                    throw new \InvalidArgumentException(sprintf('Secret with ID "%s" not found.', $id));
+            $created = new DateTimeImmutable($res['data']['metadata']['created_time'], new DateTimeZone('UTC'));
+            $version = $res['data']['metadata']['version'];
+
+            $data = [];
+            if (!empty($ids)) {
+                $secrets = $res['data']['data'];
+                foreach ($ids as $id) {
+                    if (isset($secrets[$id])) {
+                        $data[$id] = new Secret(
+                            id: $id,
+                            value: $secrets[$id],
+                            version: $version,
+                            createdAt: $created
+                        );
+                    } else {
+                        throw new \InvalidArgumentException(sprintf('Secret with ID "%s" not found.', $id));
+                    }
                 }
             }
+
+            $this->cache->set($cacheKey, $data, $expire);
         }
 
         return $data;

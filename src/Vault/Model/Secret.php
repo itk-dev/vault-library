@@ -1,6 +1,6 @@
 <?php
 
-namespace ItkDev\Vault;
+namespace ItkDev\Vault\Model;
 
 final class Secret
 {
