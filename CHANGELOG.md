@@ -14,4 +14,4 @@ See [keep a changelog] for information about writing changes to this log.
 * Added login.
 
 [keep a changelog]: https://keepachangelog.com/en/1.1.0/
-[unreleased]: https://github.com/itk-dev/itkdev-vault-library/compare/main...develop
+[unreleased]: https://github.com/itk-dev/vault-library/compare/main...develop
