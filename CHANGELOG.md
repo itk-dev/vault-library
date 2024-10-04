@@ -8,6 +8,7 @@ See [keep a changelog] for information about writing changes to this log.
 
 ## [Unreleased]
 
+* Added test cases.
 * Added cache of token and possibility to cache secrets.
 * Added get secrets.
 * Added login.
