@@ -9,9 +9,6 @@ final class Secret
         public string $value,
         public string $version,
         public \DateTimeImmutable $createdAt,
-    )
-    {
-
+    ) {
     }
-
 }
