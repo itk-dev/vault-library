@@ -2,7 +2,7 @@
 
 namespace ItkDev\Vault;
 
-class Secret
+final class Secret
 {
     public function __construct(
         public string $id,

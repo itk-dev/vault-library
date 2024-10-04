@@ -22,9 +22,9 @@ final class Token
         return $this->numUsesLeft;
     }
 
-    public function isExpired(): bool
+    public function isExpired(int $tokenGracePeriod = 60): bool
     {
-        return $this->expiresAt < new \DateTimeImmutable();
+        return $this->expiresAt->sub(new \DateInterval('PT' . $tokenGracePeriod .'S')) < new \DateTimeImmutable(timezone: new \DateTimeZone('UTC'));
     }
 
 }

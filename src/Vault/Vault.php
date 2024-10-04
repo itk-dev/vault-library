@@ -25,7 +25,7 @@ readonly class Vault implements VaultInterface
         $cacheKey = 'itkdev_vault_token';
         $token = $this->cache->get($cacheKey);
 
-        if ($reset || is_null($token)) {
+        if ($reset || is_null($token) || $token->isExpired()) {
             $loginUrl = sprintf('%s/v1/auth/%s/login', $this->vaultUrl, $enginePath);
 
             $body = $this->streamFactory->createStream(json_encode([
