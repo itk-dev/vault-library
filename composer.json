@@ -13,6 +13,11 @@
       "role": "Developer"
     }
   ],
+  "autoload": {
+    "psr-4": {
+      "ItkDev\\Vault\\": "src/Vault"
+    }
+  },
   "require": {
     "php": ">=8.2",
     "psr/http-client": "^1.0",
@@ -20,11 +25,15 @@
     "psr/simple-cache": "^3.0"
   },
   "require-dev": {
-    "phpunit/phpunit": "^11.3"
+    "phpunit/phpunit": "^11.3",
+    "friendsofphp/php-cs-fixer": "^3.64"
   },
-  "autoload": {
-    "psr-4": {
-      "ItkDev\\Vault\\": "src/Vault"
-    }
+  "scripts": {
+    "coding-standards-apply": [
+      "PHP_CS_FIXER_IGNORE_ENV=1 vendor/bin/php-cs-fixer fix"
+    ],
+    "coding-standards-check": [
+      "PHP_CS_FIXER_IGNORE_ENV=1 vendor/bin/php-cs-fixer fix --dry-run"
+    ]
   }
 }
