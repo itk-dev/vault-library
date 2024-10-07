@@ -15,5 +15,4 @@ composer require itkdev/vault
 
 ## Usage
 
-@TODO: Add links to the symfony bundel and drupal Keys provider module as
-examples on how to use this library.
+See https://github.com/itk-dev/vault-bundle
