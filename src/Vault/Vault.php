@@ -32,7 +32,7 @@ readonly class Vault implements VaultInterface
      */
     public function login(string $roleId, string $secretId, string $enginePath = 'approle', bool $refreshCache = false): Token
     {
-        $cacheKey = 'itkdev_vault_token';
+        $cacheKey = 'itkdev_vault_token'.$roleId;
         $token = $this->cache->get($cacheKey);
 
         if ($refreshCache || is_null($token) || $token->isExpired()) {
@@ -105,7 +105,7 @@ readonly class Vault implements VaultInterface
      */
     public function getSecrets(Token $token, string $path, string $secret, array $ids, ?int $version = null, bool $useCache = false, bool $refreshCache = false, int $expire = 0): array
     {
-        $cacheKey = 'itkdev_vault_secret_'.$secret;
+        $cacheKey = 'itkdev_vault_secret_'.$path.'_'.$secret.'_'.($version ?? 0);
         $data = $this->cache->get($cacheKey);
 
         if (!$useCache || is_null($data) || $refreshCache) {
