@@ -8,6 +8,8 @@ See [keep a changelog] for information about writing changes to this log.
 
 ## [Unreleased]
 
+## [0.0.1]
+
 * Added version support to secrets.
 * Added test cases.
 * Added cache of token and possibility to cache secrets.
@@ -16,3 +18,4 @@ See [keep a changelog] for information about writing changes to this log.
 
 [keep a changelog]: https://keepachangelog.com/en/1.1.0/
 [unreleased]: https://github.com/itk-dev/vault-library/compare/main...develop
+[0.0.1]: https://github.com/itk-dev/vault-library/compare/main...0.0.1
