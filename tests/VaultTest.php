@@ -126,7 +126,7 @@ class VaultTest extends TestCase
     {
         $path = 'path';
         $secretName = 'secretName';
-        $id = 'uniqueId';
+        $key = 'uniqueId';
         $token = new Token(
             token: 'hvs.CAESIO5SjAQ5ggMi7HxpZUm5TZeJWZQ5i9425SMFZ',
             expiresAt: (new \DateTimeImmutable())->add(new \DateInterval('PT300S')),
@@ -143,7 +143,7 @@ class VaultTest extends TestCase
         $responseBody = [
             'data' => [
                 'data' => [
-                    $id => 'secretValue',
+                    $key => 'secretValue',
                 ],
                 'metadata' => [
                     'created_time' => '2022-02-16T20:46:22.151178411Z',
@@ -156,7 +156,7 @@ class VaultTest extends TestCase
         $mockResponseBodyStream->method('__toString')->willReturn(json_encode($responseBody));
 
         $expectedSecret = new Secret(
-            id: $id,
+            key: $key,
             value: 'secretValue',
             version: '1',
             createdAt: new \DateTimeImmutable('2022-02-16T20:46:22.151178411Z', new \DateTimeZone('UTC')),
@@ -198,7 +198,7 @@ class VaultTest extends TestCase
             vaultUrl: $this->vaultUrl,
         );
 
-        $secret = $vault->getSecret($token, $path, $secretName, $id);
+        $secret = $vault->getSecret($token, $path, $secretName, $key);
 
         $this->assertEquals($expectedSecret, $secret);
     }

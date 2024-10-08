@@ -36,8 +36,8 @@ interface VaultInterface
      *   The path from which to retrieve the secrets
      * @param string $secret
      *   The type of secret being requested
-     * @param string $id
-     *   An id specifying which secret to receive
+     * @param string $key
+     *   A key specifying which secret to receive
      * @param int|null $version
      *   The version of the secret
      * @param bool $useCache
@@ -52,7 +52,7 @@ interface VaultInterface
      *
      * @throws VaultException
      */
-    public function getSecret(Token $token, string $path, string $secret, string $id, ?int $version = null, bool $useCache = false, bool $refreshCache = false, int $expire = 0): Secret;
+    public function getSecret(Token $token, string $path, string $secret, string $key, ?int $version = null, bool $useCache = false, bool $refreshCache = false, int $expire = 0): Secret;
 
     /**
      * Retrieves secrets from the specified secret engine path.
@@ -63,8 +63,8 @@ interface VaultInterface
      *   The path from which to retrieve the secrets
      * @param string $secret
      *   The type of secret being requested
-     * @param array<string> $ids
-     *   An array of identifiers specifying which secrets to retrieve
+     * @param array<string> $keys
+     *   An array of keys specifying which secrets to retrieve
      * @param int|null $version
      *   The version of the secrets
      * @param bool $useCache
@@ -79,5 +79,5 @@ interface VaultInterface
      *
      * @throws VaultException
      */
-    public function getSecrets(Token $token, string $path, string $secret, array $ids, ?int $version = null, bool $useCache = false, bool $refreshCache = false, int $expire = 0): array;
+    public function getSecrets(Token $token, string $path, string $secret, array $keys, ?int $version = null, bool $useCache = false, bool $refreshCache = false, int $expire = 0): array;
 }
