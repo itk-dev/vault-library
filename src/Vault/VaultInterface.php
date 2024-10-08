@@ -2,6 +2,7 @@
 
 namespace ItkDev\Vault;
 
+use ItkDev\Vault\Exception\VaultException;
 use ItkDev\Vault\Model\Secret;
 use ItkDev\Vault\Model\Token;
 
@@ -21,6 +22,8 @@ interface VaultInterface
      *
      * @return Token
      *   Token that can be used to communicate with the vault
+     *
+     * @throws VaultException
      */
     public function login(string $roleId, string $secretId, string $enginePath = 'approle', bool $refreshCache = false): Token;
 
@@ -34,7 +37,9 @@ interface VaultInterface
      * @param string $secret
      *   The type of secret being requested
      * @param string $id
-     *   An array of identifiers specifying which secrets to retrieve
+     *   An id specifying which secret to receive
+     * @param int|null $version
+     *   The version of the secret
      * @param bool $useCache
      *   Optional parameter to indicate whether to use cached secrets. Defaults to false.
      * @param bool $refreshCache
@@ -44,8 +49,10 @@ interface VaultInterface
      *
      * @return Secret
      *   The secret found
+     *
+     * @throws VaultException
      */
-    public function getSecret(Token $token, string $path, string $secret, string $id, bool $useCache = false, bool $refreshCache = false, int $expire = 0): Secret;
+    public function getSecret(Token $token, string $path, string $secret, string $id, ?int $version = null, bool $useCache = false, bool $refreshCache = false, int $expire = 0): Secret;
 
     /**
      * Retrieves secrets from the specified secret engine path.
@@ -58,6 +65,8 @@ interface VaultInterface
      *   The type of secret being requested
      * @param array<string> $ids
      *   An array of identifiers specifying which secrets to retrieve
+     * @param int|null $version
+     *   The version of the secrets
      * @param bool $useCache
      *   Optional parameter to indicate whether to use cached secrets. Defaults to false.
      * @param bool $refreshCache
@@ -67,6 +76,8 @@ interface VaultInterface
      *
      * @return array
      *   An array containing the requested secrets
+     *
+     * @throws VaultException
      */
-    public function getSecrets(Token $token, string $path, string $secret, array $ids, bool $useCache = false, bool $refreshCache = false, int $expire = 0): array;
+    public function getSecrets(Token $token, string $path, string $secret, array $ids, ?int $version = null, bool $useCache = false, bool $refreshCache = false, int $expire = 0): array;
 }

@@ -2,12 +2,17 @@
 
 namespace ItkDev\Vault;
 
+use ItkDev\Vault\Exception\NotFoundException;
+use ItkDev\Vault\Exception\UnknownErrorException;
+use ItkDev\Vault\Exception\VaultException;
 use ItkDev\Vault\Model\Secret;
 use ItkDev\Vault\Model\Token;
+use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
 use Psr\SimpleCache\CacheInterface;
+use Psr\SimpleCache\InvalidArgumentException;
 
 readonly class Vault implements VaultInterface
 {
@@ -21,15 +26,14 @@ readonly class Vault implements VaultInterface
     }
 
     /**
-     * @throws \DateMalformedIntervalStringException
+     * @throws VaultException
      * @throws \DateMalformedStringException
-     * @throws \JsonException
-     * @throws \Psr\Http\Client\ClientExceptionInterface
-     * @throws \Psr\SimpleCache\InvalidArgumentException
+     * @throws InvalidArgumentException
+     * @throws \DateMalformedIntervalStringException
      */
     public function login(string $roleId, string $secretId, string $enginePath = 'approle', bool $refreshCache = false): Token
     {
-        $cacheKey = 'itkdev_vault_token';
+        $cacheKey = 'itkdev_vault_token'.$roleId;
         $token = $this->cache->get($cacheKey);
 
         if ($refreshCache || is_null($token) || $token->isExpired()) {
@@ -39,13 +43,23 @@ readonly class Vault implements VaultInterface
                 'role_id' => $roleId,
                 'secret_id' => $secretId,
             ]));
+
             $request = $this->requestFactory->createRequest('POST', $loginUrl)
                 ->withHeader('Content-Type', 'application/json')
                 ->withBody($body);
 
-            $response = $this->httpClient->sendRequest($request);
+            try {
+                $response = $this->httpClient->sendRequest($request);
+                $data = json_decode($response->getBody(), associative: true, flags: JSON_THROW_ON_ERROR);
+            } catch (ClientExceptionInterface $e) {
+                throw new VaultException(sprintf('Vault login failed: %s', $e->getMessage()), previous: $e);
+            } catch (\JsonException $e) {
+                throw new VaultException(sprintf('Vault data decode failed: %s', $e->getMessage()), previous: $e);
+            }
 
-            $data = json_decode($response->getBody(), associative: true, flags: JSON_THROW_ON_ERROR);
+            if (isset($data['errors'])) {
+                throw new VaultException(sprintf('Vault login failed: %s', reset($data['errors'])));
+            }
 
             $ttl = (int) $data['auth']['lease_duration'];
             $now = new \DateTimeImmutable(timezone: new \DateTimeZone('UTC'));
@@ -64,18 +78,19 @@ readonly class Vault implements VaultInterface
     }
 
     /**
+     * @throws VaultException
      * @throws \DateMalformedStringException
-     * @throws \JsonException
-     * @throws \Psr\Http\Client\ClientExceptionInterface
-     * @throws \Psr\SimpleCache\InvalidArgumentException
+     * @throws InvalidArgumentException
+     * @throws UnknownErrorException
      */
-    public function getSecret(Token $token, string $path, string $secret, string $id, bool $useCache = false, bool $refreshCache = false, int $expire = 0): Secret
+    public function getSecret(Token $token, string $path, string $secret, string $id, ?int $version = null, bool $useCache = false, bool $refreshCache = false, int $expire = 0): Secret
     {
         $secret = $this->getSecrets(
             token: $token,
             path: $path,
             secret: $secret,
             ids: [$id],
+            version: $version,
             useCache: $useCache,
             refreshCache: $refreshCache,
             expire: $expire
@@ -85,29 +100,46 @@ readonly class Vault implements VaultInterface
     }
 
     /**
+     * @throws VaultException
+     * @throws UnknownErrorException
      * @throws \DateMalformedStringException
-     * @throws \JsonException
-     * @throws \Psr\Http\Client\ClientExceptionInterface
-     * @throws \Psr\SimpleCache\InvalidArgumentException
+     * @throws InvalidArgumentException
      */
-    public function getSecrets(Token $token, string $path, string $secret, array $ids, bool $useCache = false, bool $refreshCache = false, int $expire = 0): array
+    public function getSecrets(Token $token, string $path, string $secret, array $ids, ?int $version = null, bool $useCache = false, bool $refreshCache = false, int $expire = 0): array
     {
-        $cacheKey = 'itkdev_vault_secret_'.$secret;
+        $cacheKey = 'itkdev_vault_secret_'.$path.'_'.$secret.'_'.($version ?? 0);
         $data = $this->cache->get($cacheKey);
 
         if (!$useCache || is_null($data) || $refreshCache) {
             $url = sprintf('%s/v1/%s/data/%s', $this->vaultUrl, $path, $secret);
+            if (!is_null($version)) {
+                $url .= '?version='.$version;
+            }
 
             $request = $this->requestFactory->createRequest('GET', $url)
                 ->withHeader('Content-Type', 'application/json')
                 ->withHeader('Authorization', 'Bearer '.$token->token);
-            $response = $this->httpClient->sendRequest($request);
 
-            $res = json_decode($response->getBody(), associative: true, flags: JSON_THROW_ON_ERROR);
+            try {
+                $response = $this->httpClient->sendRequest($request);
+                $res = json_decode($response->getBody(), associative: true, flags: JSON_THROW_ON_ERROR);
+            } catch (ClientExceptionInterface $e) {
+                throw new VaultException(sprintf('Vault fetch failed: %s', $e->getMessage()), previous: $e);
+            } catch (\JsonException $e) {
+                throw new VaultException(sprintf('Vault data decode failed: %s', $e->getMessage()), previous: $e);
+            }
+
+            if (isset($res['errors'])) {
+                // If secret is not found an empty error array is returned.
+                if (empty($res['errors'])) {
+                    throw new UnknownErrorException('Unknown error.');
+                }
+                preg_match('/.*:\n\t\* (.+)\n\n$/', reset($res['errors']), $matches);
+                throw new VaultException(sprintf('Vault failed: %s', $matches[1] ?? ''));
+            }
 
             $created = new \DateTimeImmutable($res['data']['metadata']['created_time'], new \DateTimeZone('UTC'));
             $version = $res['data']['metadata']['version'];
-
             $data = [];
             if (!empty($ids)) {
                 $secrets = $res['data']['data'];
@@ -120,7 +152,7 @@ readonly class Vault implements VaultInterface
                             createdAt: $created
                         );
                     } else {
-                        throw new \InvalidArgumentException(sprintf('Secret with ID "%s" not found.', $id));
+                        throw new NotFoundException(sprintf('Secret with ID "%s" not found.', $id));
                     }
                 }
             }
