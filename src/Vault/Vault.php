@@ -83,13 +83,13 @@ readonly class Vault implements VaultInterface
      * @throws InvalidArgumentException
      * @throws UnknownErrorException
      */
-    public function getSecret(Token $token, string $path, string $secret, string $id, ?int $version = null, bool $useCache = false, bool $refreshCache = false, int $expire = 0): Secret
+    public function getSecret(Token $token, string $path, string $secret, string $key, ?int $version = null, bool $useCache = false, bool $refreshCache = false, int $expire = 0): Secret
     {
         $secret = $this->getSecrets(
             token: $token,
             path: $path,
             secret: $secret,
-            ids: [$id],
+            keys: [$key],
             version: $version,
             useCache: $useCache,
             refreshCache: $refreshCache,
@@ -105,7 +105,7 @@ readonly class Vault implements VaultInterface
      * @throws \DateMalformedStringException
      * @throws InvalidArgumentException
      */
-    public function getSecrets(Token $token, string $path, string $secret, array $ids, ?int $version = null, bool $useCache = false, bool $refreshCache = false, int $expire = 0): array
+    public function getSecrets(Token $token, string $path, string $secret, array $keys, ?int $version = null, bool $useCache = false, bool $refreshCache = false, int $expire = 0): array
     {
         $cacheKey = 'itkdev_vault_secret_'.$path.'_'.$secret.'_'.($version ?? 0);
         $data = $this->cache->get($cacheKey);
@@ -141,18 +141,18 @@ readonly class Vault implements VaultInterface
             $created = new \DateTimeImmutable($res['data']['metadata']['created_time'], new \DateTimeZone('UTC'));
             $version = $res['data']['metadata']['version'];
             $data = [];
-            if (!empty($ids)) {
+            if (!empty($keys)) {
                 $secrets = $res['data']['data'];
-                foreach ($ids as $id) {
-                    if (isset($secrets[$id])) {
-                        $data[$id] = new Secret(
-                            id: $id,
-                            value: $secrets[$id],
+                foreach ($keys as $key) {
+                    if (isset($secrets[$key])) {
+                        $data[$key] = new Secret(
+                            key: $key,
+                            value: $secrets[$key],
                             version: $version,
                             createdAt: $created
                         );
                     } else {
-                        throw new NotFoundException(sprintf('Secret with ID "%s" not found.', $id));
+                        throw new NotFoundException(sprintf('Secret with key "%s" not found.', $key));
                     }
                 }
             }
