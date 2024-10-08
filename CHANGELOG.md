@@ -8,6 +8,8 @@ See [keep a changelog] for information about writing changes to this log.
 
 ## [Unreleased]
 
+## [0.0.3]
+
 * Updated documentation.
 * Updated error-handling.
 
@@ -25,5 +27,6 @@ See [keep a changelog] for information about writing changes to this log.
 
 [keep a changelog]: https://keepachangelog.com/en/1.1.0/
 [Unreleased]: https://github.com/itk-dev/vault-library/compare/main...develop
-[0.0.2]: https://github.com/itk-dev/vault-library/compare/0.0.2...main
+[0.0.3]: https://github.com/itk-dev/vault-library/compare/0.0.3...main
+[0.0.2]: https://github.com/itk-dev/vault-library/compare/0.0.2...0.0.1
 [0.0.1]: https://github.com/itk-dev/vault-library/compare/0.0.1...0.0.2
