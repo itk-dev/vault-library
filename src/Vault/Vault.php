@@ -3,6 +3,7 @@
 namespace ItkDev\Vault;
 
 use ItkDev\Vault\Exception\NotFoundException;
+use ItkDev\Vault\Exception\UnknownErrorException;
 use ItkDev\Vault\Exception\VaultException;
 use ItkDev\Vault\Model\Secret;
 use ItkDev\Vault\Model\Token;
@@ -42,6 +43,7 @@ readonly class Vault implements VaultInterface
                 'role_id' => $roleId,
                 'secret_id' => $secretId,
             ]));
+
             $request = $this->requestFactory->createRequest('POST', $loginUrl)
                 ->withHeader('Content-Type', 'application/json')
                 ->withBody($body);
@@ -79,7 +81,7 @@ readonly class Vault implements VaultInterface
      * @throws VaultException
      * @throws \DateMalformedStringException
      * @throws InvalidArgumentException
-     * @throws NotFoundException
+     * @throws UnknownErrorException
      */
     public function getSecret(Token $token, string $path, string $secret, string $id, ?int $version = null, bool $useCache = false, bool $refreshCache = false, int $expire = 0): Secret
     {
@@ -99,7 +101,7 @@ readonly class Vault implements VaultInterface
 
     /**
      * @throws VaultException
-     * @throws NotFoundException
+     * @throws UnknownErrorException
      * @throws \DateMalformedStringException
      * @throws InvalidArgumentException
      */
@@ -128,8 +130,9 @@ readonly class Vault implements VaultInterface
             }
 
             if (isset($res['errors'])) {
+                // If secret is not found an empty error array is returned.
                 if (empty($res['errors'])) {
-                    throw new NotFoundException('Secrets not found.');
+                    throw new UnknownErrorException('Unknown error.');
                 }
                 preg_match('/.*:\n\t\* (.+)\n\n$/', reset($res['errors']), $matches);
                 throw new VaultException(sprintf('Vault failed: %s', $matches[1] ?? ''));

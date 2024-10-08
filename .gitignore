@@ -1,5 +1,7 @@
 vendor
 composer.lock
+node_modules
+yarn.lock
 .phpunit.result.cache
 .php-cs-fixer.cache
 .phpunit.cache/*

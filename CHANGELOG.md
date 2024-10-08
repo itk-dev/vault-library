@@ -8,6 +8,9 @@ See [keep a changelog] for information about writing changes to this log.
 
 ## [Unreleased]
 
+* Updated documentation.
+* Updated error-handling.
+
 ## [0.0.2]
 
 * Better cache key for secrets.
@@ -21,6 +24,6 @@ See [keep a changelog] for information about writing changes to this log.
 * Added login.
 
 [keep a changelog]: https://keepachangelog.com/en/1.1.0/
-[unreleased]: https://github.com/itk-dev/vault-library/compare/main...develop
-[0.0.2]: https://github.com/itk-dev/vault-library/compare/main...0.0.2
-[0.0.1]: https://github.com/itk-dev/vault-library/compare/0.0.2...0.0.1
+[Unreleased]: https://github.com/itk-dev/vault-library/compare/main...develop
+[0.0.2]: https://github.com/itk-dev/vault-library/compare/0.0.2...main
+[0.0.1]: https://github.com/itk-dev/vault-library/compare/0.0.1...0.0.2
