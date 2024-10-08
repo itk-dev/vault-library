@@ -2,6 +2,15 @@
 
 This document describes various tools used during development of this library.
 
+## Install
+
+To install the dependencies required for the development and usage of this
+library, run `composer install` through the supplied Docker Compose.
+
+```shell
+dokcer compose run --rm phpfpm composer install
+```
+
 ## Tests
 
 We use the [PHPUnit](https://phpunit.de/) testing framework.
@@ -9,7 +18,7 @@ We use the [PHPUnit](https://phpunit.de/) testing framework.
 To run tests execute the following command:
 
 ```shell
-vendor/bin/phpunit --coverage-clover=coverage/unit.xml
+dokcer compose run --rm phpfpm vendor/bin/phpunit --coverage-clover=coverage/unit.xml
 ```
 
 ## Check coding standards
@@ -17,27 +26,21 @@ vendor/bin/phpunit --coverage-clover=coverage/unit.xml
 The following commands let you test that the code follows the coding
 standards we decided to adhere to in this project.
 
-### PHP
-
 ```shell
-composer install
-composer coding-standards-check
+dokcer compose run --rm phpfpm composer coding-standards-check
 ```
 
-### Markdown
+### Check Markdown file
 
 ```shell
-yarn install
-yarn run coding-standards-check
+dokcer compose run --rm node yarn install
+dokcer compose run --rm node yarn run coding-standards-check
 ```
 
 ## Apply coding standards
 
-You can automatically fix some coding styles issues by running
-
-### PHP
+You can automatically fix some coding styles issues by running:
 
 ```shell
-composer install
-composer coding-standards-apply
+dokcer compose run --rm phpfpm composer coding-standards-apply
 ```
