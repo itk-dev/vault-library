@@ -37,7 +37,7 @@ interface VaultInterface
      * @param string $secret
      *   The type of secret being requested
      * @param string $id
-     *   An array of identifiers specifying which secrets to retrieve
+     *   An id specifying which secret to receive
      * @param int|null $version
      *   The version of the secret
      * @param bool $useCache
