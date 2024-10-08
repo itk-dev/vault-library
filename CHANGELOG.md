@@ -8,6 +8,9 @@ See [keep a changelog] for information about writing changes to this log.
 
 ## [Unreleased]
 
+* Updated documentation.
+* Updated error-handling.
+
 ## [0.0.2]
 
 * Better cache key for secrets.
