@@ -107,7 +107,7 @@ readonly class Vault implements VaultInterface
      */
     public function getSecrets(Token $token, string $path, string $secret, array $keys, ?int $version = null, bool $useCache = false, bool $refreshCache = false, int $expire = 0): array
     {
-        $cacheKey = 'itkdev_vault_secret_'.$path.'_'.$secret.'_'.($version ?? 0);
+        $cacheKey = 'itkdev_vault_secret_'.$path.'_'.$secret.'_'.implode('_', $keys).($version ?? 0);
         $data = $this->cache->get($cacheKey);
 
         if (!$useCache || is_null($data) || $refreshCache) {
