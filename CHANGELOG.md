@@ -8,6 +8,10 @@ See [keep a changelog] for information about writing changes to this log.
 
 ## [Unreleased]
 
+## [0.0.5]
+
+* Updated secret cache key to contain "keys".
+
 ## [0.0.4]
 
 * Changes Ids for secrets to be named keys.
