@@ -8,6 +8,10 @@ See [keep a changelog] for information about writing changes to this log.
 
 ## [Unreleased]
 
+## [0.1.0]
+
+* Bumped version for better usage for composer constraints.
+
 ## [0.0.5]
 
 * Updated secret cache key to contain "keys".
@@ -35,7 +39,8 @@ See [keep a changelog] for information about writing changes to this log.
 
 [keep a changelog]: https://keepachangelog.com/en/1.1.0/
 [Unreleased]: https://github.com/itk-dev/vault-library/compare/main...develop
-[0.0.4]: https://github.com/itk-dev/vault-library/compare/0.0.4...main
+[0.1.0]: https://github.com/itk-dev/vault-library/compare/0.1.0...main
+[0.0.4]: https://github.com/itk-dev/vault-library/compare/0.0.4...0.1.0
 [0.0.3]: https://github.com/itk-dev/vault-library/compare/0.0.3...0.0.2
 [0.0.2]: https://github.com/itk-dev/vault-library/compare/0.0.2...0.0.1
 [0.0.1]: https://github.com/itk-dev/vault-library/compare/0.0.1...0.0.2
