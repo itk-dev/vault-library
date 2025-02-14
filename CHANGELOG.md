@@ -8,6 +8,8 @@ See [keep a changelog] for information about writing changes to this log.
 
 ## [Unreleased]
 
+* Updated GitHub workflow images.
+
 ## [0.1.0]
 
 * Bumped version for better usage for composer constraints.
