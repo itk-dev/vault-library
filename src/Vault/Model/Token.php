@@ -43,7 +43,6 @@ final class Token
      *
      * @throws \DateInvalidOperationException
      * @throws \DateMalformedIntervalStringException
-     * @throws \DateMalformedStringException
      */
     public function isExpired(int $tokenGracePeriod = 60): bool
     {

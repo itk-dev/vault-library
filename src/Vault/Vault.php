@@ -36,13 +36,13 @@ readonly class Vault implements VaultInterface
         $cacheKey = 'itkdev_vault_token'.$roleId;
         $token = $this->cache->get($cacheKey);
 
-        if ($refreshCache || is_null($token) || $token->isExpired()) {
+        if ($refreshCache || !$token instanceof Token || $token->isExpired()) {
             $loginUrl = sprintf('%s/v1/auth/%s/login', $this->vaultUrl, $enginePath);
 
             $body = $this->streamFactory->createStream(json_encode([
                 'role_id' => $roleId,
                 'secret_id' => $secretId,
-            ]));
+            ], JSON_THROW_ON_ERROR));
 
             $request = $this->requestFactory->createRequest('POST', $loginUrl)
                 ->withHeader('Content-Type', 'application/json')
@@ -50,7 +50,8 @@ readonly class Vault implements VaultInterface
 
             try {
                 $response = $this->httpClient->sendRequest($request);
-                $data = json_decode($response->getBody(), associative: true, flags: JSON_THROW_ON_ERROR);
+                /** @var array<string, mixed> $data */
+                $data = json_decode((string) $response->getBody(), associative: true, flags: JSON_THROW_ON_ERROR);
             } catch (ClientExceptionInterface $e) {
                 throw new VaultException(sprintf('Vault login failed: %s', $e->getMessage()), previous: $e);
             } catch (\JsonException $e) {
@@ -58,17 +59,20 @@ readonly class Vault implements VaultInterface
             }
 
             if (isset($data['errors'])) {
-                throw new VaultException(sprintf('Vault login failed: %s', reset($data['errors'])));
+                /** @var array<int, string> $errors */
+                $errors = $data['errors'];
+                throw new VaultException(sprintf('Vault login failed: %s', reset($errors)));
             }
 
+            /** @var array{auth: array{lease_duration: int, client_token: string, renewable: bool, metadata: array{role_name: string}, num_uses: int}} $data */
             $ttl = (int) $data['auth']['lease_duration'];
             $now = new \DateTimeImmutable(timezone: new \DateTimeZone('UTC'));
             $token = new Token(
                 token: $data['auth']['client_token'],
                 expiresAt: $now->add(new \DateInterval('PT'.$ttl.'S')),
-                renewable: (bool) $data['auth']['renewable'],
+                renewable: $data['auth']['renewable'],
                 roleName: $data['auth']['metadata']['role_name'],
-                numUsesLeft: (int) $data['auth']['num_uses'],
+                numUsesLeft: $data['auth']['num_uses'],
             );
 
             $this->cache->set($cacheKey, $token, $ttl);
@@ -85,7 +89,7 @@ readonly class Vault implements VaultInterface
      */
     public function getSecret(Token $token, string $path, string $secret, string $key, ?int $version = null, bool $useCache = false, bool $refreshCache = false, int $expire = 0): Secret
     {
-        $secret = $this->getSecrets(
+        $secrets = $this->getSecrets(
             token: $token,
             path: $path,
             secret: $secret,
@@ -96,10 +100,14 @@ readonly class Vault implements VaultInterface
             expire: $expire
         );
 
-        return reset($secret);
+        return $secrets[$key];
     }
 
     /**
+     * @param array<string> $keys
+     *
+     * @return array<string, Secret>
+     *
      * @throws VaultException
      * @throws UnknownErrorException
      * @throws \DateMalformedStringException
@@ -110,7 +118,7 @@ readonly class Vault implements VaultInterface
         $cacheKey = 'itkdev_vault_secret_'.$path.'_'.$secret.'_'.implode('_', $keys).($version ?? 0);
         $data = $this->cache->get($cacheKey);
 
-        if (!$useCache || is_null($data) || $refreshCache) {
+        if (!$useCache || !is_array($data) || $refreshCache) {
             $url = sprintf('%s/v1/%s/data/%s', $this->vaultUrl, $path, $secret);
             if (!is_null($version)) {
                 $url .= '?version='.$version;
@@ -122,7 +130,8 @@ readonly class Vault implements VaultInterface
 
             try {
                 $response = $this->httpClient->sendRequest($request);
-                $res = json_decode($response->getBody(), associative: true, flags: JSON_THROW_ON_ERROR);
+                /** @var array<string, mixed> $res */
+                $res = json_decode((string) $response->getBody(), associative: true, flags: JSON_THROW_ON_ERROR);
             } catch (ClientExceptionInterface $e) {
                 throw new VaultException(sprintf('Vault fetch failed: %s', $e->getMessage()), previous: $e);
             } catch (\JsonException $e) {
@@ -130,16 +139,19 @@ readonly class Vault implements VaultInterface
             }
 
             if (isset($res['errors'])) {
+                /** @var array<int, string> $errors */
+                $errors = $res['errors'];
                 // If secret is not found an empty error array is returned.
-                if (empty($res['errors'])) {
+                if (empty($errors)) {
                     throw new UnknownErrorException('Unknown error.');
                 }
-                preg_match('/.*:\n\t\* (.+)\n\n$/', reset($res['errors']), $matches);
+                preg_match('/.*:\n\t\* (.+)\n\n$/', (string) reset($errors), $matches);
                 throw new VaultException(sprintf('Vault failed: %s', $matches[1] ?? ''));
             }
 
+            /** @var array{data: array{data: array<string, string>, metadata: array{created_time: string, version: string}}} $res */
             $created = new \DateTimeImmutable($res['data']['metadata']['created_time'], new \DateTimeZone('UTC'));
-            $version = $res['data']['metadata']['version'];
+            $secretVersion = (string) $res['data']['metadata']['version'];
             $data = [];
             if (!empty($keys)) {
                 $secrets = $res['data']['data'];
@@ -148,7 +160,7 @@ readonly class Vault implements VaultInterface
                         $data[$key] = new Secret(
                             key: $key,
                             value: $secrets[$key],
-                            version: $version,
+                            version: $secretVersion,
                             createdAt: $created
                         );
                     } else {
@@ -160,6 +172,7 @@ readonly class Vault implements VaultInterface
             $this->cache->set($cacheKey, $data, $expire);
         }
 
+        /** @var array<string, Secret> $data */
         return $data;
     }
 }
