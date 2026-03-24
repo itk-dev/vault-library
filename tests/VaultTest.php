@@ -2,12 +2,16 @@
 
 namespace ItkDev\Vault\Tests;
 
+use ItkDev\Vault\Exception\NotFoundException;
+use ItkDev\Vault\Exception\UnknownErrorException;
+use ItkDev\Vault\Exception\VaultException;
 use ItkDev\Vault\Model\Secret;
 use ItkDev\Vault\Model\Token;
 use ItkDev\Vault\Vault;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestFactoryInterface;
 use Psr\Http\Message\RequestInterface;
@@ -201,6 +205,315 @@ class VaultTest extends TestCase
         $secret = $vault->getSecret($token, $path, $secretName, $key);
 
         $this->assertEquals($expectedSecret, $secret);
+    }
+
+    public function testLoginThrowsOnHttpClientError(): void
+    {
+        $mockRequest = $this->createMock(RequestInterface::class);
+        $mockClient = $this->createMock(ClientInterface::class);
+        $mockRequestFactory = $this->createMock(RequestFactoryInterface::class);
+        $mockStreamFactory = $this->createMock(StreamFactoryInterface::class);
+        $mockStream = $this->createMock(StreamInterface::class);
+
+        $mockStreamFactory->method('createStream')->willReturn($mockStream);
+        $mockRequestFactory->method('createRequest')->willReturn($mockRequest);
+        $mockRequest->method('withHeader')->willReturnSelf();
+        $mockRequest->method('withBody')->willReturnSelf();
+
+        $mockClient->method('sendRequest')
+            ->willThrowException($this->createMock(ClientExceptionInterface::class));
+
+        $vault = new Vault(
+            httpClient: $mockClient,
+            requestFactory: $mockRequestFactory,
+            streamFactory: $mockStreamFactory,
+            cache: $this->cacheMock,
+            vaultUrl: $this->vaultUrl,
+        );
+
+        $this->expectException(VaultException::class);
+        $this->expectExceptionMessageMatches('/Vault login failed/');
+        $vault->login('role-id', 'secret-id');
+    }
+
+    public function testLoginThrowsOnVaultErrorResponse(): void
+    {
+        $mockRequest = $this->createMock(RequestInterface::class);
+        $mockClient = $this->createMock(ClientInterface::class);
+        $mockRequestFactory = $this->createMock(RequestFactoryInterface::class);
+        $mockStreamFactory = $this->createMock(StreamFactoryInterface::class);
+        $mockStream = $this->createMock(StreamInterface::class);
+        $mockResponseBodyStream = $this->createMock(StreamInterface::class);
+        $mockResponse = $this->createMock(ResponseInterface::class);
+
+        $mockStreamFactory->method('createStream')->willReturn($mockStream);
+        $mockRequestFactory->method('createRequest')->willReturn($mockRequest);
+        $mockRequest->method('withHeader')->willReturnSelf();
+        $mockRequest->method('withBody')->willReturnSelf();
+
+        $mockResponseBodyStream->method('__toString')
+            ->willReturn(json_encode(['errors' => ['invalid credentials']]));
+        $mockResponse->method('getBody')->willReturn($mockResponseBodyStream);
+        $mockClient->method('sendRequest')->willReturn($mockResponse);
+
+        $vault = new Vault(
+            httpClient: $mockClient,
+            requestFactory: $mockRequestFactory,
+            streamFactory: $mockStreamFactory,
+            cache: $this->cacheMock,
+            vaultUrl: $this->vaultUrl,
+        );
+
+        $this->expectException(VaultException::class);
+        $this->expectExceptionMessageMatches('/invalid credentials/');
+        $vault->login('role-id', 'secret-id');
+    }
+
+    public function testLoginWithRefreshCacheBypassesCache(): void
+    {
+        $ttl = 3600;
+        $expectedBody = [
+            'auth' => [
+                'client_token' => 'new-token',
+                'metadata' => ['role_name' => 'test'],
+                'lease_duration' => $ttl,
+                'renewable' => false,
+                'num_uses' => 0,
+            ],
+        ];
+
+        $mockRequest = $this->createMock(RequestInterface::class);
+        $mockClient = $this->createMock(ClientInterface::class);
+        $mockRequestFactory = $this->createMock(RequestFactoryInterface::class);
+        $mockStreamFactory = $this->createMock(StreamFactoryInterface::class);
+        $mockStream = $this->createMock(StreamInterface::class);
+        $mockResponseBodyStream = $this->createMock(StreamInterface::class);
+        $mockResponse = $this->createMock(ResponseInterface::class);
+
+        $mockStreamFactory->method('createStream')->willReturn($mockStream);
+        $mockRequestFactory->method('createRequest')->willReturn($mockRequest);
+        $mockRequest->method('withHeader')->willReturnSelf();
+        $mockRequest->method('withBody')->willReturnSelf();
+
+        $mockResponseBodyStream->method('__toString')
+            ->willReturn(json_encode($expectedBody));
+        $mockResponse->method('getBody')->willReturn($mockResponseBodyStream);
+
+        // Expect sendRequest called twice (once per login with refreshCache=true)
+        $mockClient->expects($this->exactly(2))
+            ->method('sendRequest')
+            ->willReturn($mockResponse);
+
+        $vault = new Vault(
+            httpClient: $mockClient,
+            requestFactory: $mockRequestFactory,
+            streamFactory: $mockStreamFactory,
+            cache: $this->cacheMock,
+            vaultUrl: $this->vaultUrl,
+        );
+
+        $token1 = $vault->login('role-id', 'secret-id');
+        $token2 = $vault->login('role-id', 'secret-id', refreshCache: true);
+
+        $this->assertSame('new-token', $token1->token);
+        $this->assertSame('new-token', $token2->token);
+    }
+
+    public function testGetSecretThrowsNotFoundForMissingKey(): void
+    {
+        $token = new Token(
+            token: 'test-token',
+            expiresAt: (new \DateTimeImmutable())->add(new \DateInterval('PT300S')),
+            renewable: false,
+            roleName: 'test',
+            numUsesLeft: 0,
+        );
+
+        $responseBody = [
+            'data' => [
+                'data' => ['otherKey' => 'value'],
+                'metadata' => [
+                    'created_time' => '2022-02-16T20:46:22.151178411Z',
+                    'version' => 1,
+                ],
+            ],
+        ];
+
+        $mockRequest = $this->createMock(RequestInterface::class);
+        $mockClient = $this->createMock(ClientInterface::class);
+        $mockRequestFactory = $this->createMock(RequestFactoryInterface::class);
+        $mockResponseBodyStream = $this->createMock(StreamInterface::class);
+        $mockResponse = $this->createMock(ResponseInterface::class);
+
+        $mockRequestFactory->method('createRequest')->willReturn($mockRequest);
+        $mockRequest->method('withHeader')->willReturnSelf();
+        $mockResponseBodyStream->method('__toString')->willReturn(json_encode($responseBody));
+        $mockResponse->method('getBody')->willReturn($mockResponseBodyStream);
+        $mockClient->method('sendRequest')->willReturn($mockResponse);
+
+        $vault = new Vault(
+            httpClient: $mockClient,
+            requestFactory: $mockRequestFactory,
+            streamFactory: $this->createMock(StreamFactoryInterface::class),
+            cache: $this->cacheMock,
+            vaultUrl: $this->vaultUrl,
+        );
+
+        $this->expectException(NotFoundException::class);
+        $vault->getSecret($token, 'path', 'secret', 'missingKey');
+    }
+
+    public function testGetSecretsThrowsOnHttpClientError(): void
+    {
+        $token = new Token(
+            token: 'test-token',
+            expiresAt: (new \DateTimeImmutable())->add(new \DateInterval('PT300S')),
+            renewable: false,
+            roleName: 'test',
+            numUsesLeft: 0,
+        );
+
+        $mockRequest = $this->createMock(RequestInterface::class);
+        $mockClient = $this->createMock(ClientInterface::class);
+        $mockRequestFactory = $this->createMock(RequestFactoryInterface::class);
+
+        $mockRequestFactory->method('createRequest')->willReturn($mockRequest);
+        $mockRequest->method('withHeader')->willReturnSelf();
+        $mockClient->method('sendRequest')
+            ->willThrowException($this->createMock(ClientExceptionInterface::class));
+
+        $vault = new Vault(
+            httpClient: $mockClient,
+            requestFactory: $mockRequestFactory,
+            streamFactory: $this->createMock(StreamFactoryInterface::class),
+            cache: $this->cacheMock,
+            vaultUrl: $this->vaultUrl,
+        );
+
+        $this->expectException(VaultException::class);
+        $this->expectExceptionMessageMatches('/Vault fetch failed/');
+        $vault->getSecrets($token, 'path', 'secret', ['key']);
+    }
+
+    public function testGetSecretsThrowsUnknownErrorOnEmptyErrors(): void
+    {
+        $token = new Token(
+            token: 'test-token',
+            expiresAt: (new \DateTimeImmutable())->add(new \DateInterval('PT300S')),
+            renewable: false,
+            roleName: 'test',
+            numUsesLeft: 0,
+        );
+
+        $mockRequest = $this->createMock(RequestInterface::class);
+        $mockClient = $this->createMock(ClientInterface::class);
+        $mockRequestFactory = $this->createMock(RequestFactoryInterface::class);
+        $mockResponseBodyStream = $this->createMock(StreamInterface::class);
+        $mockResponse = $this->createMock(ResponseInterface::class);
+
+        $mockRequestFactory->method('createRequest')->willReturn($mockRequest);
+        $mockRequest->method('withHeader')->willReturnSelf();
+        $mockResponseBodyStream->method('__toString')
+            ->willReturn(json_encode(['errors' => []]));
+        $mockResponse->method('getBody')->willReturn($mockResponseBodyStream);
+        $mockClient->method('sendRequest')->willReturn($mockResponse);
+
+        $vault = new Vault(
+            httpClient: $mockClient,
+            requestFactory: $mockRequestFactory,
+            streamFactory: $this->createMock(StreamFactoryInterface::class),
+            cache: $this->cacheMock,
+            vaultUrl: $this->vaultUrl,
+        );
+
+        $this->expectException(UnknownErrorException::class);
+        $vault->getSecrets($token, 'path', 'secret', ['key']);
+    }
+
+    public function testGetSecretsThrowsOnVaultErrorResponse(): void
+    {
+        $token = new Token(
+            token: 'test-token',
+            expiresAt: (new \DateTimeImmutable())->add(new \DateInterval('PT300S')),
+            renewable: false,
+            roleName: 'test',
+            numUsesLeft: 0,
+        );
+
+        $mockRequest = $this->createMock(RequestInterface::class);
+        $mockClient = $this->createMock(ClientInterface::class);
+        $mockRequestFactory = $this->createMock(RequestFactoryInterface::class);
+        $mockResponseBodyStream = $this->createMock(StreamInterface::class);
+        $mockResponse = $this->createMock(ResponseInterface::class);
+
+        $mockRequestFactory->method('createRequest')->willReturn($mockRequest);
+        $mockRequest->method('withHeader')->willReturnSelf();
+        $mockResponseBodyStream->method('__toString')
+            ->willReturn(json_encode(['errors' => ['permission denied']]));
+        $mockResponse->method('getBody')->willReturn($mockResponseBodyStream);
+        $mockClient->method('sendRequest')->willReturn($mockResponse);
+
+        $vault = new Vault(
+            httpClient: $mockClient,
+            requestFactory: $mockRequestFactory,
+            streamFactory: $this->createMock(StreamFactoryInterface::class),
+            cache: $this->cacheMock,
+            vaultUrl: $this->vaultUrl,
+        );
+
+        $this->expectException(VaultException::class);
+        $this->expectExceptionMessageMatches('/Vault failed/');
+        $vault->getSecrets($token, 'path', 'secret', ['key']);
+    }
+
+    public function testGetSecretsWithVersionParameter(): void
+    {
+        $token = new Token(
+            token: 'test-token',
+            expiresAt: (new \DateTimeImmutable())->add(new \DateInterval('PT300S')),
+            renewable: false,
+            roleName: 'test',
+            numUsesLeft: 0,
+        );
+
+        $responseBody = [
+            'data' => [
+                'data' => ['myKey' => 'myValue'],
+                'metadata' => [
+                    'created_time' => '2022-02-16T20:46:22.151178411Z',
+                    'version' => 3,
+                ],
+            ],
+        ];
+
+        $mockRequest = $this->createMock(RequestInterface::class);
+        $mockClient = $this->createMock(ClientInterface::class);
+        $mockRequestFactory = $this->createMock(RequestFactoryInterface::class);
+        $mockResponseBodyStream = $this->createMock(StreamInterface::class);
+        $mockResponse = $this->createMock(ResponseInterface::class);
+
+        $mockRequestFactory->expects($this->once())
+            ->method('createRequest')
+            ->with('GET', $this->vaultUrl.'/v1/path/data/secret?version=3')
+            ->willReturn($mockRequest);
+        $mockRequest->method('withHeader')->willReturnSelf();
+        $mockResponseBodyStream->method('__toString')->willReturn(json_encode($responseBody));
+        $mockResponse->method('getBody')->willReturn($mockResponseBodyStream);
+        $mockClient->method('sendRequest')->willReturn($mockResponse);
+
+        $vault = new Vault(
+            httpClient: $mockClient,
+            requestFactory: $mockRequestFactory,
+            streamFactory: $this->createMock(StreamFactoryInterface::class),
+            cache: $this->cacheMock,
+            vaultUrl: $this->vaultUrl,
+        );
+
+        $secrets = $vault->getSecrets($token, 'path', 'secret', ['myKey'], version: 3);
+
+        $this->assertArrayHasKey('myKey', $secrets);
+        $this->assertSame('myValue', $secrets['myKey']->value);
+        $this->assertSame('3', $secrets['myKey']->version);
     }
 
     /**
