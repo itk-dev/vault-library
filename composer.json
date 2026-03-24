@@ -42,13 +42,5 @@
       "ergebnis/composer-normalize": true,
       "symfony/runtime": true
     }
-  },
-  "scripts": {
-    "coding-standards-apply": [
-      "PHP_CS_FIXER_IGNORE_ENV=1 vendor/bin/php-cs-fixer fix"
-    ],
-    "coding-standards-check": [
-      "PHP_CS_FIXER_IGNORE_ENV=1 vendor/bin/php-cs-fixer fix --dry-run"
-    ]
   }
 }
