@@ -44,15 +44,15 @@ This starts the Docker containers and installs Composer dependencies.
 
 Run `task` to list all available tasks. Key tasks:
 
-| Task | Description |
-|------|-------------|
-| `task test` | Run unit tests |
-| `task test:coverage` | Run tests with coverage report |
-| `task test:matrix` | Run tests across PHP 8.3, 8.4, 8.5 (mirrors CI) |
-| `task lint` | Run all linters (PHP, Composer, Markdown, YAML) |
-| `task lint:php:fix` | Auto-fix PHP coding standards |
-| `task analyze:php` | Run PHPStan static analysis |
-| `task pr:actions` | Run all CI checks locally |
+| Task                 | Description                                     |
+|----------------------|-------------------------------------------------|
+| `task test`          | Run unit tests                                  |
+| `task test:coverage` | Run tests with coverage report                  |
+| `task test:matrix`   | Run tests across PHP 8.3, 8.4, 8.5 (mirrors CI) |
+| `task lint`          | Run all linters (PHP, Composer, Markdown, YAML) |
+| `task lint:php:fix`  | Auto-fix PHP coding standards                   |
+| `task analyze:php`   | Run PHPStan static analysis                     |
+| `task pr:actions`    | Run all CI checks locally                       |
 
 ### Test matrix
 
