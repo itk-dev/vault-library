@@ -6,3 +6,4 @@ yarn.lock
 .php-cs-fixer.cache
 .phpunit.cache/*
 .phpunit.cache
+coverage

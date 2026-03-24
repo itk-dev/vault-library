@@ -74,7 +74,7 @@ interface VaultInterface
      * @param int $expire
      *   Optional parameter specifying cache expiration time in seconds. Defaults to 0.
      *
-     * @return array
+     * @return array<string, Secret>
      *   An array containing the requested secrets
      *
      * @throws VaultException

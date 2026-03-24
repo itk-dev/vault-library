@@ -9,6 +9,12 @@ See [keep a changelog] for information about writing changes to this log.
 ## [Unreleased]
 
 * Updated GitHub workflow images.
+* Modernized dev environment with Taskfile and multi-PHP docker setup (8.3, 8.4, 8.5).
+* Replaced monolithic PR workflow with dedicated CI workflows.
+* Upgraded to PHPUnit 12 and bumped minimum PHP to 8.3.
+* Fixed PHPStan errors at max level.
+* Added PHPStan and markdownlint configuration.
+* Added tests for error paths and Token model (94% line coverage).
 
 ## [0.1.0]
 
