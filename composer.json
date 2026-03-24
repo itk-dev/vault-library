@@ -1,10 +1,14 @@
 {
   "name": "itk-dev/vault",
-  "type": "library",
   "description": "Library to communicate with Hashicorp Vault",
-  "keywords": ["Hashicorp", "vault", "approle", "e"],
-  "homepage": "https://github.com/itk-dev",
   "license": "MIT",
+  "type": "library",
+  "keywords": [
+    "Hashicorp",
+    "vault",
+    "approle",
+    "e"
+  ],
   "authors": [
     {
       "name": "Jesper Kristensen",
@@ -13,11 +17,7 @@
       "role": "Developer"
     }
   ],
-  "autoload": {
-    "psr-4": {
-      "ItkDev\\Vault\\": "src/Vault"
-    }
-  },
+  "homepage": "https://github.com/itk-dev",
   "require": {
     "php": ">=8.2",
     "psr/http-client": "^1.0",
@@ -25,8 +25,23 @@
     "psr/simple-cache": "^3.0"
   },
   "require-dev": {
-    "phpunit/phpunit": "^11.3",
-    "friendsofphp/php-cs-fixer": "^3.64"
+    "ergebnis/composer-normalize": "^2.28",
+    "friendsofphp/php-cs-fixer": "^3.64",
+    "phpstan/phpstan": "^2.1",
+    "phpunit/phpunit": "^12.0",
+    "rector/rector": "^2.0",
+    "symfony/runtime": "^6.4.13 || ^7.0 || ^8.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "ItkDev\\Vault\\": "src/Vault"
+    }
+  },
+  "config": {
+    "allow-plugins": {
+      "ergebnis/composer-normalize": true,
+      "symfony/runtime": true
+    }
   },
   "scripts": {
     "coding-standards-apply": [
